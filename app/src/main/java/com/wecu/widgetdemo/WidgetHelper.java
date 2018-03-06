@@ -7,6 +7,7 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProviderInfo;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.RectF;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -24,7 +25,7 @@ import static android.app.Activity.RESULT_OK;
  * Created by wecu on 2018/3/6.
  */
 
-public class WidgetHelper {
+public class WidgetHelper implements IWidgetCallBack {
 
 //    private static class Holder {
 //        private final static WidgetHelper INSTANCE = new WidgetHelper(null);
@@ -82,6 +83,7 @@ public class WidgetHelper {
             case CREAT_APPWIDGET:
                 addWidget(data);
                 break;
+            default:break;
         }
     }
 
@@ -129,13 +131,21 @@ public class WidgetHelper {
     }
 
     public void changeWidgetSize(View child) {
+        if (vParent == null) {
+            return;
+        }
         ViewGroup viewGroup = ((ViewGroup) vParent.getParent());
         if (viewGroup != null && viewGroup instanceof FrameLayout) {
             FrameLayout frameLayout = (FrameLayout) viewGroup;
+            FrameLayout.LayoutParams marginLayoutParams = new FrameLayout.LayoutParams(child.getWidth(), child.getHeight());
+            marginLayoutParams.leftMargin = child.getLeft();
+            marginLayoutParams.topMargin = child.getTop();
             vParent.removeView(child);
+            child.setLayoutParams(marginLayoutParams);
             WidgetDragView widgetDragView = new WidgetDragView(mContext);
+            widgetDragView.setCallBack(this);
             widgetDragView.addView(child);
-            frameLayout.addView(widgetDragView);
+            frameLayout.addView(widgetDragView, new ViewGroup.LayoutParams(-1, -1));
         }
     }
 
@@ -180,5 +190,15 @@ public class WidgetHelper {
     public WidgetHelper setWidgetList(List<View> mWidgetList) {
         this.mWidgetList = mWidgetList;
         return this;
+    }
+
+
+    @Override
+    public void stopDragMode(View deleteView, View addView) {
+        ViewGroup viewGroup = ((ViewGroup) vParent.getParent());
+        if (viewGroup != null && viewGroup instanceof FrameLayout) {
+            viewGroup.removeView(deleteView);
+        }
+        vParent.addView(addView);
     }
 }

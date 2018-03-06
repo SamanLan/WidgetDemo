@@ -15,16 +15,18 @@ import android.widget.FrameLayout;
  * Created by wecu on 2018/3/6.
  */
 
-public class WidgetDragView extends FrameLayout {
+public class WidgetDragView extends FrameLayout implements View.OnClickListener {
 
     private int mCircleSize;
     private float mDensity;
     private Paint mPaint;
     private RectF[] mPointRectF;
-    private View mChildView;
+    private View vChildView;
     private boolean mCanDrag = false;
     private MarginLayoutParams mLayoutParams;
     private @IWidgetDragCallBack.WidgetDragDirection int mDragPointIndex = -1;
+    private IWidgetCallBack mCallBack;
+    private IWidgetDragCallBack mDragCallBack;
 
     public WidgetDragView(Context context) {
         this(context, null);
@@ -37,43 +39,52 @@ public class WidgetDragView extends FrameLayout {
 
     private void init(Context context) {
         mDensity = context.getResources().getDisplayMetrics().density;
-        mCircleSize = (int) (mDensity * 5);
+        mCircleSize = (int) (mDensity * 15);
         mPointRectF = new RectF[4];
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setColor(Color.RED);
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeWidth(mDensity * 2);
+        setOnClickListener(this);
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        vChildView = getChildAt(0);
+        if (vChildView != null) {
+            mLayoutParams = (MarginLayoutParams) vChildView.getLayoutParams();
+            mLayoutParams.topMargin += mCircleSize;
+            mLayoutParams.leftMargin += mCircleSize;
+            vChildView.setLayoutParams(mLayoutParams);
+        }
     }
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
-        mChildView = getChildAt(0);
-        if (mChildView != null) {
-            mLayoutParams = (MarginLayoutParams) mChildView.getLayoutParams();
-        }
     }
 
     @Override
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
-        if (mChildView != null) {
-            canvas.drawRect(mChildView.getLeft(), mChildView.getTop(), mChildView.getRight(), mChildView.getBottom(), mPaint);
-            int midWidth = (mChildView.getLeft() + mChildView.getRight()) / 2 + mChildView.getLeft();
-            int midHeight = (mChildView.getTop() + mChildView.getBottom()) / 2 + mChildView.getTop();
+        if (vChildView != null) {
+            canvas.drawRect(vChildView.getLeft(), vChildView.getTop(), vChildView.getRight(), vChildView.getBottom(), mPaint);
+            int midWidth = (vChildView.getRight() - vChildView.getLeft()) / 2 + vChildView.getLeft();
+            int midHeight = (vChildView.getBottom() - vChildView.getTop()) / 2 + vChildView.getTop();
             mPaint.setColor(Color.BLUE);
-            canvas.drawCircle(midWidth, mChildView.getTop(), mCircleSize, mPaint);
-            canvas.drawCircle(midWidth, mChildView.getBottom(), mCircleSize, mPaint);
-            canvas.drawCircle(mChildView.getLeft(), midHeight, mCircleSize, mPaint);
-            canvas.drawCircle(mChildView.getRight(), midHeight, mCircleSize, mPaint);
+            canvas.drawCircle(midWidth, vChildView.getTop(), mCircleSize, mPaint);
+            canvas.drawCircle(midWidth, vChildView.getBottom(), mCircleSize, mPaint);
+            canvas.drawCircle(vChildView.getLeft(), midHeight, mCircleSize, mPaint);
+            canvas.drawCircle(vChildView.getRight(), midHeight, mCircleSize, mPaint);
             // 左
-            mPointRectF[0] = new RectF(mChildView.getLeft() - mCircleSize, midHeight - mCircleSize, mChildView.getLeft() + mCircleSize, midHeight + mCircleSize);
+            mPointRectF[0] = new RectF(vChildView.getLeft() - mCircleSize, midHeight - mCircleSize, vChildView.getLeft() + mCircleSize, midHeight + mCircleSize);
             // 上
-            mPointRectF[1] = new RectF(midWidth - mCircleSize, mChildView.getTop() - mCircleSize, midWidth + mCircleSize, mChildView.getTop() + mCircleSize);
+            mPointRectF[1] = new RectF(midWidth - mCircleSize, vChildView.getTop() - mCircleSize, midWidth + mCircleSize, vChildView.getTop() + mCircleSize);
             // 右
-            mPointRectF[2] = new RectF(mChildView.getRight() - mCircleSize, midHeight - mCircleSize, mChildView.getRight() + mCircleSize, midHeight + mCircleSize);
+            mPointRectF[2] = new RectF(vChildView.getRight() - mCircleSize, midHeight - mCircleSize, vChildView.getRight() + mCircleSize, midHeight + mCircleSize);
             // 下
-            mPointRectF[3] = new RectF(midWidth - mCircleSize, mChildView.getBottom() - mCircleSize, midWidth + mCircleSize, mChildView.getBottom() + mCircleSize);
+            mPointRectF[3] = new RectF(midWidth - mCircleSize, vChildView.getBottom() - mCircleSize, midWidth + mCircleSize, vChildView.getBottom() + mCircleSize);
         }
     }
 
@@ -85,8 +96,9 @@ public class WidgetDragView extends FrameLayout {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (mChildView == null || mLayoutParams ==null)
+        if (vChildView == null || mLayoutParams ==null) {
             return false;
+        }
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 mCanDrag = canDrag(event);
@@ -100,8 +112,9 @@ public class WidgetDragView extends FrameLayout {
             case MotionEvent.ACTION_CANCEL:
                 releasePoint();
                 break;
+            default:break;
         }
-        return true;
+        return mCanDrag || super.onTouchEvent(event);
     }
 
     /**
@@ -142,25 +155,31 @@ public class WidgetDragView extends FrameLayout {
      */
     private void dealDrag(MotionEvent event) {
         int lastLeft = mLayoutParams.leftMargin;
-        int lastWidth = mChildView.getWidth();
+        int lastTop = mLayoutParams.topMargin;
+        int lastWidth = vChildView.getWidth();
+        int lastHeight = vChildView.getHeight();
         int moveX = (int) event.getX();
+        int moveY = (int) event.getY();
         int offsetX = moveX - lastLeft;
+        int offsetY = moveY - lastTop;
         if (mDragPointIndex == IWidgetDragCallBack.LEFT) {
             mLayoutParams.width = lastWidth - offsetX;
             mLayoutParams.leftMargin = moveX;
-            mChildView.setLayoutParams(mLayoutParams);
+            vChildView.setLayoutParams(mLayoutParams);
         } else if (mDragPointIndex == IWidgetDragCallBack.TOP) {
-            mLayoutParams.height = (int) event.getY();
-            mChildView.setLayoutParams(mLayoutParams);
+            mLayoutParams.height = lastHeight - offsetY;
+            mLayoutParams.topMargin = moveY;
+            vChildView.setLayoutParams(mLayoutParams);
         } else if (mDragPointIndex == IWidgetDragCallBack.RIGHT) {
             // 右边滑动不需要特殊处理
             mLayoutParams.leftMargin = lastLeft;
             mLayoutParams.width = (int) event.getX() - lastLeft;
-            mChildView.setLayoutParams(mLayoutParams);
+            vChildView.setLayoutParams(mLayoutParams);
         } else if (mDragPointIndex == IWidgetDragCallBack.BOTTOM) {
             // 下面滑动也不需要特殊处理
-            mLayoutParams.height = (int) event.getY();
-            mChildView.setLayoutParams(mLayoutParams);
+            mLayoutParams.topMargin = lastTop;
+            mLayoutParams.height = (int) event.getY() - lastTop;
+            vChildView.setLayoutParams(mLayoutParams);
         }
     }
 
@@ -168,7 +187,40 @@ public class WidgetDragView extends FrameLayout {
      * 释放手指后的操作
      */
     private void releasePoint() {
-        mDragPointIndex = -1;
+        if (mDragCallBack != null) {
+            if (mDragCallBack.canResize(mDragPointIndex, new RectF(vChildView.getLeft(), vChildView.getTop(),
+                    vChildView.getRight(), vChildView.getBottom()))) {
+
+            } else {
+                // 返回滑动范围与当前父亲所能支持的最大的范围的最大交集
+
+            }
+        }
+        mDragPointIndex = IWidgetDragCallBack.NONE;
         mCanDrag = false;
+    }
+
+    @Override
+    public void onClick(View v) {
+        if (mCallBack != null) {
+            removeView(vChildView);
+            mCallBack.stopDragMode(this, vChildView);
+        }
+    }
+
+    public IWidgetCallBack getCallBack() {
+        return mCallBack;
+    }
+
+    public void setCallBack(IWidgetCallBack mCallBack) {
+        this.mCallBack = mCallBack;
+    }
+
+    public IWidgetDragCallBack getDragCallBack() {
+        return mDragCallBack;
+    }
+
+    public void setDragCallBack(IWidgetDragCallBack mDragCallBack) {
+        this.mDragCallBack = mDragCallBack;
     }
 }
