@@ -7,9 +7,7 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProviderInfo;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.RectF;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -22,40 +20,30 @@ import static android.app.Activity.RESULT_CANCELED;
 import static android.app.Activity.RESULT_OK;
 
 /**
- * Created by wecu on 2018/3/6.
+ * Created by wecu on 2018/3/7.
  */
 
-public class WidgetHelper implements IWidgetCallBack {
+public abstract class AWidgetHelper implements IWidgetCallBack {
+    protected static final int HOST_ID = 1024;
+    protected static final int REQUEST_APPWIDGET = 100;
+    protected static final int CREAT_APPWIDGET = 101;
 
-//    private static class Holder {
-//        private final static WidgetHelper INSTANCE = new WidgetHelper(null);
-//    }
+    protected AppWidgetHost mAppWidgetHost;
+    protected AppWidgetManager mAppWidgetManager;
+    protected ViewGroup vParent;
+    protected Context mContext;
 
-    private final String TAG = "WidgetHelper";
+    protected IWidgetDragCallBack mDragCallBack;
 
-    private static final int HOST_ID = 1024;
-    private static final int REQUEST_APPWIDGET = 100;
-    private static final int CREAT_APPWIDGET = 101;
+    protected List<AppWidgetHostView> mWidgetList;
+    protected WidgetModel mWidgetModel;
 
-    private AppWidgetHost mAppWidgetHost;
-    private AppWidgetManager mAppWidgetManager;
-    private ViewGroup vParent;
-    private Context mContext;
-
-    private IWidgetDragCallBack mDragCallBack;
-
-    private List<View> mWidgetList;
-
-    public WidgetHelper(Context context) {
-        this.mContext = context;
+    public AWidgetHelper(Context context) {
+        mContext = context;
         mAppWidgetHost = new AppWidgetHost(mContext, HOST_ID);
         mAppWidgetManager = AppWidgetManager.getInstance(mContext);
         mWidgetList = new ArrayList<>();
     }
-//
-//    public WidgetHelper getInstance() {
-//        return Holder.INSTANCE;
-//    }
 
     public void onStart() {
         mAppWidgetHost.startListening();
@@ -83,7 +71,8 @@ public class WidgetHelper implements IWidgetCallBack {
             case CREAT_APPWIDGET:
                 addWidget(data);
                 break;
-            default:break;
+            default:
+                break;
         }
     }
 
@@ -102,16 +91,17 @@ public class WidgetHelper implements IWidgetCallBack {
 
     /**
      * 添加widget
+     *
      * @param data 返回的数据源
      */
     private void addWidget(Intent data) {
-        Bundle extra = data.getExtras() ;
-        int appWidgetId = extra.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID , -1) ;
-        if(appWidgetId == -1){
+        Bundle extra = data.getExtras();
+        int appWidgetId = extra.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
+        if (appWidgetId == -1) {
             Toast.makeText(mContext, "添加窗口小部件有误", Toast.LENGTH_SHORT).show();
-            return ;
+            return;
         }
-        AppWidgetProviderInfo appWidgetProviderInfo = mAppWidgetManager.getAppWidgetInfo(appWidgetId) ;
+        AppWidgetProviderInfo appWidgetProviderInfo = mAppWidgetManager.getAppWidgetInfo(appWidgetId);
         AppWidgetHostView hostView = mAppWidgetHost.createView(mContext, appWidgetId, appWidgetProviderInfo);
         hostView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -126,7 +116,8 @@ public class WidgetHelper implements IWidgetCallBack {
         if (vParent == null) {
             return;
         }
-        vParent.addView(hostView,new ViewGroup.LayoutParams(width,height));
+        vParent.addView(hostView, new ViewGroup.LayoutParams(Math.min(width, vParent.getWidth() - vParent.getPaddingLeft() - vParent.getPaddingRight()),
+                Math.min(height, vParent.getHeight() - vParent.getPaddingTop() - vParent.getPaddingBottom())));
         mWidgetList.add(hostView);
     }
 
@@ -137,9 +128,12 @@ public class WidgetHelper implements IWidgetCallBack {
         ViewGroup viewGroup = ((ViewGroup) vParent.getParent());
         if (viewGroup != null && viewGroup instanceof FrameLayout) {
             FrameLayout frameLayout = (FrameLayout) viewGroup;
-            FrameLayout.LayoutParams marginLayoutParams = new FrameLayout.LayoutParams(child.getWidth(), child.getHeight());
+            FrameLayout.LayoutParams marginLayoutParams = new FrameLayout.LayoutParams(Math.min(viewGroup.getWidth(), child.getWidth()),
+                    Math.min(child.getHeight(), viewGroup.getHeight()));
             marginLayoutParams.leftMargin = child.getLeft();
             marginLayoutParams.topMargin = child.getTop();
+            marginLayoutParams.bottomMargin = child.getBottom();
+            marginLayoutParams.rightMargin = child.getRight();
             vParent.removeView(child);
             child.setLayoutParams(marginLayoutParams);
             WidgetDragView widgetDragView = new WidgetDragView(mContext);
@@ -151,15 +145,10 @@ public class WidgetHelper implements IWidgetCallBack {
 
     /**
      * 获取所有widgets
+     *
      * @return widget list
      */
-    public List<AppWidgetProviderInfo> getAllWidgets() {
-        List<AppWidgetProviderInfo> list = mAppWidgetManager.getInstalledProviders();
-        for (AppWidgetProviderInfo appWidgetProviderInfo : list) {
-            System.out.println(appWidgetProviderInfo.label);
-        }
-        return list;
-    }
+    public abstract List<WidgetProviderInfo> getAllWidgets();
 
     public void beginDragWidget(View view) {
 
@@ -169,29 +158,33 @@ public class WidgetHelper implements IWidgetCallBack {
         return vParent;
     }
 
-    public WidgetHelper setParent(ViewGroup vParent) {
+    public void setParent(ViewGroup vParent) {
         this.vParent = vParent;
-        return this;
     }
 
     public IWidgetDragCallBack getDragCallBack() {
         return mDragCallBack;
     }
 
-    public WidgetHelper setDragCallBack(IWidgetDragCallBack mDragCallBack) {
+    public void setDragCallBack(IWidgetDragCallBack mDragCallBack) {
         this.mDragCallBack = mDragCallBack;
-        return this;
     }
 
-    public List<View> getWidgetList() {
+    public List<AppWidgetHostView> getWidgetList() {
         return mWidgetList;
     }
 
-    public WidgetHelper setWidgetList(List<View> mWidgetList) {
+    public void setWidgetList(List<AppWidgetHostView> mWidgetList) {
         this.mWidgetList = mWidgetList;
-        return this;
     }
 
+    public WidgetModel getWidgetModel() {
+        return mWidgetModel;
+    }
+
+    public void setWidgetModel(WidgetModel mWidgetModel) {
+        this.mWidgetModel = mWidgetModel;
+    }
 
     @Override
     public void stopDragMode(View deleteView, View addView) {

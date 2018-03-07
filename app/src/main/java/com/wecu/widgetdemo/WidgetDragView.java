@@ -1,9 +1,12 @@
 package com.wecu.widgetdemo;
 
+import android.appwidget.AppWidgetHostView;
+import android.appwidget.AppWidgetProviderInfo;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
@@ -27,6 +30,8 @@ public class WidgetDragView extends FrameLayout implements View.OnClickListener 
     private @IWidgetDragCallBack.WidgetDragDirection int mDragPointIndex = -1;
     private IWidgetCallBack mCallBack;
     private IWidgetDragCallBack mDragCallBack;
+    private WidgetProviderInfo mWidgetInfo;
+    private Point mLastMovePoint;
 
     public WidgetDragView(Context context) {
         this(context, null);
@@ -56,6 +61,8 @@ public class WidgetDragView extends FrameLayout implements View.OnClickListener 
             mLayoutParams = (MarginLayoutParams) vChildView.getLayoutParams();
             mLayoutParams.topMargin += mCircleSize;
             mLayoutParams.leftMargin += mCircleSize;
+            mLayoutParams.rightMargin += mCircleSize;
+            mLayoutParams.bottomMargin += mCircleSize;
             vChildView.setLayoutParams(mLayoutParams);
         }
     }
@@ -102,9 +109,10 @@ public class WidgetDragView extends FrameLayout implements View.OnClickListener 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 mCanDrag = canDrag(event);
+                mLastMovePoint = new Point(((int) event.getX()), ((int) event.getY()));
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (mCanDrag) {
+                if (mCanDrag && canKeepMove(event)) {
                     dealDrag(event);
                 }
                 break;
@@ -115,6 +123,40 @@ public class WidgetDragView extends FrameLayout implements View.OnClickListener 
             default:break;
         }
         return mCanDrag || super.onTouchEvent(event);
+    }
+
+    /**
+     * 能否继续滑动，判断规则为是否滑动会小于widget的最小宽高
+     * @param event 滑动event
+     * @return 能否继续滑动
+     */
+    private boolean canKeepMove(MotionEvent event) {
+        if (vChildView instanceof AppWidgetHostView) {
+            if (mWidgetInfo == null) {
+                AppWidgetHostView view = ((AppWidgetHostView) vChildView);
+                AppWidgetProviderInfo appWidgetProviderInfo = view.getAppWidgetInfo();
+                mWidgetInfo = WidgetProviderInfo.fromProviderInfo(getContext(), appWidgetProviderInfo);
+            }
+            // TODO: 2018/3/7 这里可以继续加超过屏幕的限制
+            if (mDragPointIndex == IWidgetDragCallBack.LEFT &&
+                    (mLayoutParams.width - event.getX() + mLastMovePoint.x < mWidgetInfo.minResizeWidth)) {
+                return false;
+            }
+            if (mDragPointIndex == IWidgetDragCallBack.RIGHT &&
+                    (mLayoutParams.width + event.getX() - mLastMovePoint.x < mWidgetInfo.minResizeWidth)) {
+                return false;
+            }
+            if (mDragPointIndex == IWidgetDragCallBack.TOP &&
+                    (mLayoutParams.height - event.getY() + mLastMovePoint.y < mWidgetInfo.minResizeHeight)) {
+                return false;
+            }
+            if (mDragPointIndex == IWidgetDragCallBack.BOTTOM &&
+                    (mLayoutParams.height + event.getY() - mLastMovePoint.y < mWidgetInfo.minResizeHeight)) {
+                return false;
+            }
+        }
+        mLastMovePoint = new Point(((int) event.getX()), ((int) event.getY()));
+        return true;
     }
 
     /**
