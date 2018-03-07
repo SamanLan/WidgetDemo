@@ -9,9 +9,10 @@ import java.util.List;
  */
 
 public class WidgetModel {
-    private HashMap<String, PackageItemInfo> mPackageItemInfos = new HashMap<>();
+    public HashMap<String, PackageItemInfo> mPackageItemInfos = new HashMap<>();
 
-    private HashMap<PackageItemInfo, ArrayList<Object>> mWidgetsList = new HashMap<>();
+    // TODO: 2018/3/7 重写hashcode和equals
+    public HashMap<PackageItemInfo, ArrayList<Object>> mWidgetsList = new HashMap<>();
 
     public void setWidgetList(List<WidgetProviderInfo> list) {
         mWidgetsList.clear();

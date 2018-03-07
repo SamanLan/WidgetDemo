@@ -45,4 +45,8 @@ public class MainActivity extends AppCompatActivity {
         mWidgetHelper.changeWidgetSize(mWidgetHelper.getWidgetList().get(0));
         mWidgetHelper.getAllWidgets();
     }
+
+    public void getAllWidget(View view) {
+        startActivity(new Intent(this, SelectWidgetActivity.class));
+    }
 }
