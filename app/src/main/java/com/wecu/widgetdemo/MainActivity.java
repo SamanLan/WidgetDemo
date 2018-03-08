@@ -1,21 +1,49 @@
 package com.wecu.widgetdemo;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.NotificationCompat;
 import android.view.View;
 import android.view.ViewGroup;
 
 public class MainActivity extends AppCompatActivity {
 
     private AWidgetHelper mWidgetHelper;
+    boolean hasPermission = false;
+    ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            System.out.println("绑定服务");
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        LauncherNotificationManager.toggleNotificationListenerService(this);
         setContentView(R.layout.activity_main);
         mWidgetHelper = new WidgetHelperV16(this);
         mWidgetHelper.setParent((ViewGroup) findViewById(R.id.content));
+        if (LauncherNotificationManager.isNotificationListenersEnabled(this)) {
+            System.out.println("有权限");
+//            hasPermission = true;
+//            bindService(new Intent(this, LauncherNotificationService.class), serviceConnection, BIND_AUTO_CREATE);
+            startService(new Intent(this, LauncherNotificationService.class));
+        } else {
+            System.out.println("无权限，跳转权限设置");
+            LauncherNotificationManager.gotoNotificationAccessSetting(this);
+        }
     }
 
     @Override
@@ -48,5 +76,21 @@ public class MainActivity extends AppCompatActivity {
 
     public void getAllWidget(View view) {
         startActivity(new Intent(this, SelectWidgetActivity.class));
+    }
+
+    public void sendNotification(View view) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        builder.setSmallIcon(R.mipmap.ic_launcher_round);
+        builder.setContentText("content");
+        builder.setContentTitle("title");
+        ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).notify(1, builder.build());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+//        if (hasPermission) {
+//            unbindService(serviceConnection);
+//        }
     }
 }
