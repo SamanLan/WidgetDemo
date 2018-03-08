@@ -169,24 +169,10 @@ public class WidgetDragView extends FrameLayout implements View.OnClickListener 
         float downX = event.getX();
         float dowY = event.getY();
         for (int i = 0; i < mPointRectF.length; i++) {
-            if (isInPointRect(mPointRectF[i], downX, dowY)) {
+            if (mPointRectF[i].contains(downX, dowY)) {
                 mDragPointIndex = i;
                 return true;
             }
-        }
-        return false;
-    }
-
-    /**
-     * 是否在移动的四点内
-     * @param rectF 点的rect
-     * @param x 点击的x
-     * @param y 点击的y
-     * @return 是否在
-     */
-    private boolean isInPointRect(RectF rectF, float x, float y) {
-        if (x >= rectF.left && x <= rectF.right && y >= rectF.top && y <= rectF.bottom) {
-            return true;
         }
         return false;
     }

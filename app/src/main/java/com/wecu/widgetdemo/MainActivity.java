@@ -11,10 +11,15 @@ import android.os.Bundle;
 import android.support.v7.app.NotificationCompat;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
+
+import com.wecu.widgetdemo.badge.CustomTextView;
 
 public class MainActivity extends AppCompatActivity {
 
     private AWidgetHelper mWidgetHelper;
+    private CustomTextView vTextView;
+    boolean show = true;
     boolean hasPermission = false;
     ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
@@ -35,6 +40,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         mWidgetHelper = new WidgetHelperV16(this);
         mWidgetHelper.setParent((ViewGroup) findViewById(R.id.content));
+        vTextView = (CustomTextView) findViewById(R.id.text);
+        vTextView.setBadgeText(100).setIcon(getResources().getDrawable(R.mipmap.ic_launcher_round)).setText("789");
+        vTextView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                vTextView.setBadgeVisible(show = !show);
+            }
+        });
         if (LauncherNotificationManager.isNotificationListenersEnabled(this)) {
             System.out.println("有权限");
 //            hasPermission = true;
