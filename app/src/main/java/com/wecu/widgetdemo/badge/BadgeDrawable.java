@@ -71,6 +71,7 @@ public class BadgeDrawable extends GradientDrawable {
      */
     public void setText(String text) {
         mText = text;
+        setVisible(true);
         if (TextUtils.isEmpty(mText)) {
             // 小圆点
             int size = (int)(mHeight * 0.65);
@@ -87,8 +88,8 @@ public class BadgeDrawable extends GradientDrawable {
      * @param number 角标数字，大于99则为。。。
      */
     public void setNumber(int number) {
-        if (number < 0) {
-            setText("");
+        if (number <= 0) {
+            setVisible(false);
         } else if (number > 99) {
             setText("...");
         } else {

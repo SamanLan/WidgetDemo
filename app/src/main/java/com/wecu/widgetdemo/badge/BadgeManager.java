@@ -1,5 +1,6 @@
 package com.wecu.widgetdemo.badge;
 
+import android.app.Notification;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;

@@ -6,19 +6,26 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
+import android.service.notification.StatusBarNotification;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.app.NotificationCompat;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.wecu.widgetdemo.badge.CustomTextView;
+import com.wecu.widgetdemo.badge.NotificationKeyData;
+import com.wecu.widgetdemo.badge.PackageUserKey;
 
-public class MainActivity extends AppCompatActivity {
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity implements LauncherNotificationService.NotificationsChangedListener {
 
     private AWidgetHelper mWidgetHelper;
     private CustomTextView vTextView;
+    private CustomTextView vQQ;
     boolean show = true;
     boolean hasPermission = false;
     ServiceConnection serviceConnection = new ServiceConnection() {
@@ -41,7 +48,8 @@ public class MainActivity extends AppCompatActivity {
         mWidgetHelper = new WidgetHelperV16(this);
         mWidgetHelper.setParent((ViewGroup) findViewById(R.id.content));
         vTextView = (CustomTextView) findViewById(R.id.text);
-        vTextView.setBadgeText(100).setIcon(getResources().getDrawable(R.mipmap.ic_launcher_round)).setText("789");
+        vQQ = (CustomTextView) findViewById(R.id.text2);
+        vTextView.setBadgeText("123").setIcon(getResources().getDrawable(R.mipmap.ic_launcher_round)).setText("123");
         vTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -53,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
 //            hasPermission = true;
 //            bindService(new Intent(this, LauncherNotificationService.class), serviceConnection, BIND_AUTO_CREATE);
             startService(new Intent(this, LauncherNotificationService.class));
+            LauncherNotificationService.setNotificationsChangedListener(this);
         } else {
             System.out.println("无权限，跳转权限设置");
             LauncherNotificationManager.gotoNotificationAccessSetting(this);
@@ -91,12 +100,14 @@ public class MainActivity extends AppCompatActivity {
         startActivity(new Intent(this, SelectWidgetActivity.class));
     }
 
+    int notificationId = 0;
+
     public void sendNotification(View view) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
         builder.setSmallIcon(R.mipmap.ic_launcher_round);
         builder.setContentText("content");
         builder.setContentTitle("title");
-        ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).notify(1, builder.build());
+        ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).notify(notificationId++, builder.build());
     }
 
     @Override
@@ -105,5 +116,31 @@ public class MainActivity extends AppCompatActivity {
 //        if (hasPermission) {
 //            unbindService(serviceConnection);
 //        }
+    }
+
+    int notificationNum = 0;
+    int qqNum = 0;
+
+    @Override
+    public void onNotificationPosted(PackageUserKey postedPackageUserKey, NotificationKeyData notificationKey, boolean shouldBeFilteredOut) {
+        if (getPackageName().equals(postedPackageUserKey.mPackageName)) {
+            vTextView.setBadgeText(notificationNum += notificationKey.count);
+        } else if ("com.tencent.mobileqq".equals(postedPackageUserKey.mPackageName)) {
+            vQQ.setBadgeText(qqNum += notificationKey.count);
+        }
+    }
+
+    @Override
+    public void onNotificationRemoved(PackageUserKey removedPackageUserKey, NotificationKeyData notificationKey) {
+        if (getPackageName().equals(removedPackageUserKey.mPackageName)) {
+            vTextView.setBadgeText((notificationNum -= notificationKey.count) == 0 ? 0 : notificationNum);
+        } else if ("com.tencent.mobileqq".equals(removedPackageUserKey.mPackageName)) {
+            vQQ.setBadgeText((qqNum -= notificationKey.count) == 0 ? 0 : qqNum);
+        }
+    }
+
+    @Override
+    public void onNotificationFullRefresh(List<StatusBarNotification> activeNotifications) {
+        Toast.makeText(this, "begin", Toast.LENGTH_SHORT).show();
     }
 }

@@ -28,6 +28,12 @@ public class CustomTextView extends TextView {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+
+    }
+
+    @Override
+    public void draw(Canvas canvas) {
+        super.draw(canvas);
         int width = getMeasuredWidth();
         if (getCompoundDrawables()[1] != null) {
             // 假如有个drawableTop的话，设置角标开始于drawable的末尾
@@ -36,22 +42,18 @@ public class CustomTextView extends TextView {
             // 设置角标位置行文字的末尾
             mBadgeDrawable.layout((width + (int) getLayout().getLineWidth(0)) / 2, getPaddingTop(), width);
         }
-
-    }
-
-    @Override
-    public void draw(Canvas canvas) {
-        super.draw(canvas);
         mBadgeDrawable.draw(canvas);
     }
 
     public CustomTextView setBadgeText(String text) {
         mBadgeDrawable.setText(text);
+        invalidate();
         return this;
     }
 
     public CustomTextView setBadgeText(int text) {
         mBadgeDrawable.setNumber(text);
+        invalidate();
         return this;
     }
 
@@ -61,6 +63,7 @@ public class CustomTextView extends TextView {
         }
         Drawable[] cds = getCompoundDrawables();
         setCompoundDrawables(cds[0], drawable, cds[2], cds[3]);
+//        invalidate();
         return this;
     }
 
